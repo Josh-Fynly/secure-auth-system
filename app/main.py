@@ -1,11 +1,26 @@
-from fastapi import FastAPI
-from .database import engine, Base
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
+
+from .database import SessionLocal, engine, Base
+from . import schemas, auth
 
 app = FastAPI()
 
-# Create tables
 Base.metadata.create_all(bind=engine)
+
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @app.get("/")
 def root():
-    return {"status": "database connected"}
+    return {"status": "auth system running"}
+
+@app.post("/register")
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    new_user = auth.register_user(db, user.username, user.password)
+    return {"message": f"user {new_user.username} created"}
